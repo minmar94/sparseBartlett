@@ -259,10 +259,10 @@ function hmc_dual_av(log_dens::Function, d_b::Vector{Float64},   theta::Vector{F
         restart_hmc_par(type_hmc)
     end
     if type_hmc.general_iter[1] == 1
-        println("START: find_reasonable_epsilon")
+        
         find_reasonable_epsilon(theta, log_dens, d_b, type_hmc.epsilon,  add_const)
         type_hmc.mu[1] = log(10.0*type_hmc.epsilon[1])
-        println("END: find_reasonable_epsilon", type_hmc.epsilon[1])
+        
     end
 
     npar::Int64 = size(theta,1)
@@ -386,10 +386,9 @@ function hmc_dual_av_nouturn(log_dens::Function, d_b::Vector{Float64},   theta::
         restart_hmc_par(type_hmc)
     end
     if type_hmc.general_iter[1] == 1
-        println("START: find_reasonable_epsilon", type_hmc.epsilon[1])
+
         find_reasonable_epsilon(theta, log_dens, d_b, type_hmc.epsilon, add_const)
         type_hmc.mu[1] = log(10.0*type_hmc.epsilon[1])
-        println("END: find_reasonable_epsilon", type_hmc.epsilon[1])
     end
 
     theta_start::Vector{Float64} = deepcopy(theta)

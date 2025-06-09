@@ -1,13 +1,13 @@
 # This script runs simulations for different graphical models using the SparseBartlettPackage in Julia.
-# It generates synthetic data under various settings (banded, random, sparse, etc.),
-# introduces missingness and zero-inflation as specified, and runs MCMC for Bayesian inference.
+# It generates synthetic count data (Poisson) under various settings (banded, random, sparse, etc.),
+# introduces missingness and zero-inflation as specified, and runs MCMC for Bayesian inference using a GLM approach.
 # The results are saved for further analysis in R.
 #
 # Key sections:
 # - Parameter setup and environment activation
 # - Data generation for different model structures
 # - Handling of missing data and zero-inflation
-# - MCMC sampling using the SparseBartlettPackage
+# - MCMC sampling using the SparseBartlettPackage (GLM version)
 # - Exporting results to R for post-processing
 
 #### #### #### #### #### #### 
@@ -16,7 +16,7 @@
 
 # Flag to indicate if this is the first run (for environment setup)
 is_first_time::Bool = false # it is used to instantiate the environment
-                            # use it only the first time youy ran any simulations
+# use it only the first time youy ran any simulations
 
 #### #### #### #### #### #### 
 #### !simulations
@@ -50,6 +50,7 @@ end
 
 # name of the output files
 name_gen = "Simulation_"
+
 # Main simulation loop over seeds and model sizes
 n = 100
 for i_seed in 1:20
@@ -84,7 +85,7 @@ for i_seed in 1:20
                     for index_decay in 1:end_decay
 
                         # Set likelihood and simulation parameters for the current scenario
-                        index_like = 1
+                        index_like = 2
                         par_pi::Float64 = 0.5
                         par_like = [Normal(0.1, 0.1), Poisson(0.1), Bernoulli(0.1)][index_like]
                         par_miss = [0.0, 0.1][index_miss]
@@ -101,26 +102,24 @@ for i_seed in 1:20
                             name = name * "perczero=" * string(par_zero)
                         end
                         ## sim
-
-                        # Set random seed for reproducibility
                         seed = 1
                         Random.seed!(seed + index_seed)
                         name = name * "seed=" * string(seed + index_seed)
                         #### sim
-
-                        # Initialize precision matrix (lambda) and adjacency matrix (z_mat)
+                        println(name)
+                        println(typeof(par_like))
+                        println([n, k])
+                        kappa = 0.1
                         lambda = zeros(Float64, k, k)
                         z_mat = zeros(Int64, k, k)
 
-                        # Initialize data matrices and parameters
-                        y::Matrix{Float64} = zeros(Float64, k, n)
-                        w::Matrix{Float64} = zeros(Float64, k, n)
+                        y = zeros(Float64, k, n)::Matrix{Float64}
+                        w = zeros(Float64, k, n)::Matrix{Float64}
 
                         beta_vec = rand(Normal(0.0, 2.0^0.5), k)
                         mu_mat = rand(Normal(0.0, 2.0^0.5), k, n)
                         cov = ones(Float64, k, 1, n)
-
-                        # Generate model structure and precision matrix based on model type
+                        
                         if index_data <= 3
                             # Banded models: set up banded precision and adjacency matrices
                             kappa = 1.0
@@ -152,11 +151,11 @@ for i_seed in 1:20
                             end
                             chol = cholesky(Symmetric(inv(cov_mat))).L
                             nm = Int64(((k^2 - k) / 2.0))
-                            n_sparse = Int64(trunc(nm * par_zero))::Int64
-                            index_sparse = sample(1:nm, n_sparse)::Vector{Int64}
+                            n_sparse::Int64 = Int64(trunc(nm * par_zero))
+                            index_sparse::Vector{Int64} = sample(1:nm, n_sparse)
                             index_sparse = index_sparse[sortperm(index_sparse)]
-                            index_not_sparse = (1:nm)[(!in).((1:nm), Ref(index_sparse))]()::Vector{Int64}
-                            row_col_indm = zeros(Int64, nm, 3)::Matrix{Int64}
+                            index_not_sparse::Vector{Int64} = (1:nm)[(!in).((1:nm), Ref(index_sparse))]
+                            row_col_indm::Matrix{Int64} = zeros(Int64, nm, 3)
                             h = 1
                             for j = 1:(k-1)
                                 for i = (j+1):k
@@ -233,13 +232,13 @@ for i_seed in 1:20
                             @rput k
                             R"""
                                 library(BDgraph)
-                                mat = rgwish(1,t(z_mat),3,diag(1,k))
+                                mat = rgwish(1,t(z_mat),3,diag(1,k)) 
                             """
                             @rget mat
                             lambda .= mat
                             #inv(lambda)
                         else
-                            error("")
+                            error("T3")
                         end
 
                         # Standardize the precision matrix
@@ -253,14 +252,18 @@ for i_seed in 1:20
 
                         # Compute covariance matrix from precision matrix
                         sigma::Symmetric{Float64,Matrix{Float64}} = inv(Symmetric(lambda))
+                        #beta_vec .= log.(rand(Uniform(2.0,7.0),k))
+                        beta_vec = [log(5.0)]
 
-                        # Generate mean structure and sample data from the multivariate normal data
-                        
-                        beta_vec = [0.0]
+                        # Generate mean structure and sample data from the Poisson GLM
                         for l = 1:n
                             mu_mat[:, l] = cov[:, :, l] * beta_vec
-                            y[:, l] = rand(MvNormal(mu_mat[:, l], sigma))
+                            w[:, l] = rand(MvNormal(mu_mat[:, l], sigma))
+                            for j = 1:k
+                                y[j, l] = 1.0 * rand(Poisson(exp(w[j, l])))
+                            end
                         end
+                        y
 
                         # Handle missing data: randomly mask entries and impute based on likelihood
                         index_miss_mat = zeros(Int64, 0, 0)
@@ -302,7 +305,6 @@ for i_seed in 1:20
                             end
                         end
 
-                        # Run MCMC for Bayesian inference on the generated data
                         ##### ##### ##### ##### ##### ##### 
                         ##### MCMC 
                         ##### ##### ##### ##### ##### ##### 
@@ -312,10 +314,9 @@ for i_seed in 1:20
                         Random.seed!(seed + index_seed)
                         nm = Int64((k * k - k) / 2)
                         mcmc_par = (iter=10000 * molt, burnin=8000 * molt, thin=1 * molt)
-                        #mcmc_par = (iter=3, burnin=1, thin=1)
-                        Random.seed!(seed + index_seed)
-
-                        out = mcmc(
+                        mcmc_par = (iter=3, burnin=1, thin=1)
+                        
+                        out = mcmc_glm(
                             # Observed data matrix (with missing values imputed)
                             ydata=ydata,
                             # MCMC iteration parameters: (iter, burnin, thin)
@@ -331,7 +332,7 @@ for i_seed in 1:20
                             # Prior for the precision matrix (Wishart distribution)
                             prior_lambda=Wishart(1.0 * (k + 3 - 1), 1.0 .* Matrix(I(k))),
                             # Prior for the mean parameter
-                            prior_mu=Normal(0.0, 1000.0^0.5),
+                            prior_mu=Normal(0.0, 1000.0^0.5), 
                             # Initial values for scale parameters
                             c_init=ones(Float64, k),
                             # Initial values for mean vector
@@ -346,10 +347,14 @@ for i_seed in 1:20
                             iter_start_hmc=1,
                             # Iteration to start updating sparsity pattern
                             iter_start_zeta=500,
+                            # Likelihood function (Poisson, Normal, Bernoulli)
+                            like=par_like,
+                            # Initial latent variable matrix for GLM
+                            w_init=zeros(Float64, k, n),
                             # Indices of missing data in the observed matrix
                             missing_index=index_miss_mat
                         )
-
+                        
                         # Extract MCMC output
                         m_out = out.m_out
                         c_out = out.c_out
@@ -358,17 +363,16 @@ for i_seed in 1:20
                         zmat_out = out.zmat_out
                         beta_out = out.beta_out
                         missing_out = out.missing_out
-
-                        # Export results and relevant variables to R for saving and further analysis
+                        w_out = out.w_out
                         
+                        # Export results and relevant variables to R for saving and further analysis
                         @rput true_y
                         @rput par_miss
                         @rput missing_out
                         @rput index_miss_mat
                         @rput beta_out
-
-                        @rput lambda_out
                         
+                        @rput lambda_out
                         @rput name
                         @rput lambda
                         @rput k
@@ -376,22 +380,23 @@ for i_seed in 1:20
                         @rput z_mat
                         @rput beta_vec
                         @rput y
+                        @rput w
                         @rput beta_vec
+                        @rput w_out
 
-                        dir_out =  "./codes/simulations/out/"
-                        @rput dir_out;
+                        dir_out = "./codes/simulations/out/"
+                        @rput dir_out
                         R"""
                             save.image(paste(dir_out, name, "mcmc_out_lambda.Rdata", sep=""))
                         """
                         # End of script
                     end
-
                 end
-
             end
         end
-
     end
-
 end
+
+
+
 

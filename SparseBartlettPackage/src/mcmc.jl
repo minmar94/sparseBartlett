@@ -118,11 +118,7 @@ function mcmc(;
         out_missing = zeros(Float64,sampletosave, nmiss)
     end
 
-    #perm_mat::Matrix{Int64} = compute_unique_permutations(k)
-    #rev_perm_mat = deepcopy(perm_mat)
-    #for ik in 1:k
-    #    rev_perm_mat[ik, :] = sortperm(perm_mat[ik, :])
-    #end
+
     
     prec_q::Vector{Matrix{Float64}} = [zeros(Float64, k - l + 1, k - l + 1) for l = 1:k]
     for j = 1:(k-1)
