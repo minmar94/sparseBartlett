@@ -1,0 +1,3 @@
+# SparseBartlettPackage
+
+*Documentation goes here.*
