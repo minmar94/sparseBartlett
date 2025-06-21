@@ -1,2 +1,5 @@
-codes/simulations/out/*
+/simulations/out_normal/*
+/simulations/out_poisson/*
+/simulations/for_figures_normal/*
+/simulations/for_figures_poisson/*
 
