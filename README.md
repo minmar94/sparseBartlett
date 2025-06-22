@@ -11,7 +11,7 @@ The work introduces a general strategy for defining distributions over the space
 The `sparseBartlett/simulations` folder contains Julia scripts for running simulation studies using the `SparseBartlettPackage`. Each script generates synthetic data under different settings and runs MCMC for Bayesian inference.
 
 ### Prerequisites
-- Julia (v1.6 or later recommended)
+- Julia (v1.9 or later recommended)
 - All required Julia packages (see `Project.toml`)
 - R (for scripts using `RCall` and `BDgraph`)
 - The `SparseBartlettPackage` must be available in the workspace
@@ -46,7 +46,7 @@ The scripts `for_figures_normals.R` and `for_figures_poisson.R` (in the `simulat
 The `applications` folder contains example scripts showing how to apply the `SparseBartlettPackage` to real datasets and statistical models.
 
 ### Prerequisites
-- Julia (v1.6 or later recommended)
+- Julia (v1.9 or later recommended)
 - All required Julia packages (see `Project.toml`)
 - R (for some scripts using `RCall`)
 - The `SparseBartlettPackage` must be available in the workspace
