@@ -55,13 +55,9 @@ The `applications` folder contains example scripts showing how to apply the `Spa
 
 To run the **Doubs** dataset, assuming independence between species:
 ```julia
-include("applications/counts transpose.jl")
+include("applications/doubs.jl")
 ```
 
-To assume independence between sites:
-```julia
-include("applications/counts.jl")
-```
 
 For the **genetic data** examples:
 ```julia
@@ -81,5 +77,3 @@ include("applications/gwishart_geneExp.R")
 - As above, if running for the first time, set `is_first_time = true` at the top of the script.
 - Output files and results will be saved in the specified output directory.
 - Ensure R is installed and callable from Julia.
-
-> 💬 **MINGIOOOOO**: Same as before — change the script if you want to generate the plots from the output files in the `for_figures_` folders.
