@@ -1,5 +1,7 @@
 /simulations/out_normal/*
 /simulations/out_poisson/*
 /applications/out/*
+*.vscode
+.gitignore
 
 
