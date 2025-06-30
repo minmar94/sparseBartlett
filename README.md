@@ -37,7 +37,6 @@ include("simulations/PoissonLikelihood.jl")
 
 The scripts `for_figures_normals.R` and `for_figures_poisson.R` (in the `simulations` folder) create the `.Rdata` files needed to produce the figures in the paper. Run these after completing the simulations.
 
-> 💬 **MINGIOOOOO**: You might want to describe here how to generate the plots from the files in the `for_figures_` folders. I’ve left a couple of files for reference. Your figure data is already in the folder.
 
 ---
 
